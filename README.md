@@ -129,11 +129,27 @@ Remove a file from the vector database.
 
 ### Setup
 
-1. **Clone and install dependencies:**
+1. **Clone the repository:**
 ```bash
 git clone https://github.com/iamayuppie/AnyDbApp.git
 cd AnyDbApp
+```
+
+2. **Install dependencies (choose one option):**
+
+**Option A: Full installation (recommended)**
+```bash
 pip install -r requirements.txt
+```
+
+**Option B: Minimal installation (core database tools only)**  
+```bash
+pip install -r requirements-minimal.txt
+```
+
+**Option C: Manual installation of core dependencies**
+```bash
+pip install mcp aiosqlite ollama
 ```
 
 2. **Start Ollama:**

@@ -220,11 +220,17 @@ class VectorDatabaseManager:
             ids.append(chunk_id)
         
         # Add to ChromaDB (embeddings are generated automatically)
-        self.collection.add(
-            documents=documents,
-            metadatas=metadatas,
-            ids=ids
-        )
+        try:
+            self.collection.add(
+                documents=documents,
+                metadatas=metadatas,
+                ids=ids
+            )
+        except Exception as e:
+            logger.error(f"ChromaDB add operation failed: {str(e)}")
+            import traceback
+            logger.error(f"ChromaDB traceback: {traceback.format_exc()}")
+            raise
         
         logger.info(f"File '{filename}' added with {len(chunks)} chunks")
         return {
@@ -649,8 +655,28 @@ async def main():
         async with stdio_server() as (read_stream, write_stream):
             logger.info("MCP server connected and ready")
             await server.run(read_stream, write_stream, server.create_initialization_options())
+    except BaseExceptionGroup as eg:
+        # Handle ExceptionGroup (TaskGroup errors) - Python 3.11+
+        logger.error(f"MCP server ExceptionGroup with {len(eg.exceptions)} exceptions:")
+        for i, exc in enumerate(eg.exceptions):
+            logger.error(f"Exception {i+1}: {type(exc).__name__}: {str(exc)}")
+            import traceback
+            logger.error(f"Traceback {i+1}: {''.join(traceback.format_exception(type(exc), exc, exc.__traceback__))}")
+        
+        # Check if these are non-critical background task errors
+        non_critical_errors = ['RuntimeError', 'OSError', 'ConnectionError']
+        all_non_critical = all(type(exc).__name__ in non_critical_errors for exc in eg.exceptions)
+        
+        if all_non_critical:
+            logger.warning("All exceptions appear to be non-critical background task errors - continuing operation")
+        else:
+            logger.error("Critical exceptions detected in ExceptionGroup - this may affect functionality")
+            # Don't raise for now to avoid crashing the server, but log it prominently
+            logger.error("SERVER CONTINUING DESPITE CRITICAL ERRORS - monitor for functionality issues")
     except Exception as e:
         logger.error(f"MCP server error: {str(e)}")
+        import traceback
+        logger.error(f"Full traceback: {traceback.format_exc()}")
         raise
 
 if __name__ == "__main__":

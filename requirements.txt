@@ -1,16 +1,21 @@
+# Core MCP and database dependencies (REQUIRED)
+mcp>=0.4.0
+aiosqlite>=0.19.0
+ollama>=0.2.1
+pydantic>=2.0.0
+typing-extensions>=4.0.0
+
+# Vector database and embeddings (for RAG functionality)
+chromadb>=0.4.15
+sentence-transformers>=2.2.2
+tiktoken>=0.5.1
+numpy>=1.24.3
+
+# FastAPI dependencies (used by ChromaDB)
 fastapi>=0.104.1
 uvicorn[standard]>=0.24.0
+
+# LangChain (optional - for advanced SQL features)
 langchain>=0.0.350
 langchain-community>=0.0.10
 langchain-core>=0.1.0
-mcp>=0.4.0
-ollama>=0.2.1
-pydantic>=2.0.0
-aiosqlite>=0.19.0
-typing-extensions>=4.0.0
-
-# Vector database and embeddings
-chromadb>=0.4.15
-sentence-transformers>=2.2.2
-numpy>=1.24.3
-tiktoken>=0.5.1
