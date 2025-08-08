@@ -1,6 +1,7 @@
 import asyncio
 import json
 import sqlite3
+import os
 from typing import Any, Dict, List, Optional, Union
 
 import ollama
@@ -10,7 +11,11 @@ import aiosqlite
 
 
 class DatabaseManager:
-    def __init__(self, db_path: str = "anydb.sqlite"):
+    def __init__(self, db_path: str = None):
+        if db_path is None:
+            # Use absolute path to ensure database is created in the same directory as the script
+            script_dir = os.path.dirname(os.path.abspath(__file__))
+            db_path = os.path.join(script_dir, "anydb.sqlite")
         self.db_path = db_path
         self.init_database()
     
@@ -18,6 +23,7 @@ class DatabaseManager:
         conn = sqlite3.connect(self.db_path)
         conn.execute("PRAGMA foreign_keys = ON")
         conn.close()
+        print(f"Database initialized at: {self.db_path}")
     
     async def execute_query(self, query: str, params: tuple = ()) -> List[Dict[str, Any]]:
         async with aiosqlite.connect(self.db_path) as db:
@@ -196,9 +202,12 @@ async def call_tool(name: str, arguments: Dict[str, Any]) -> List[Dict[str, Any]
             entity_name = arguments["entity_name"]
             schema_description = arguments["schema_description"]
             instruction = f"CREATE TABLE {entity_name} with schema: {schema_description}"
+            print(f"Creating table: {entity_name} with instruction: {instruction}")
             sql_query = await ollama_client.generate_sql(instruction, entity_name)
+            print(f"Generated SQL: {sql_query}")
             await db_manager.execute_modify(sql_query)
-            return [{"type": "text", "text": json.dumps({"sql": sql_query, "message": f"Table {entity_name} created successfully"})}]
+            print(f"Table {entity_name} created successfully in database: {db_manager.db_path}")
+            return [{"type": "text", "text": json.dumps({"sql": sql_query, "message": f"Table {entity_name} created successfully", "database_path": db_manager.db_path})}]
         
         elif name == "sql_query":
             query = arguments["query"]
