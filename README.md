@@ -135,30 +135,18 @@ git clone https://github.com/iamayuppie/AnyDbApp.git
 cd AnyDbApp
 ```
 
-2. **Install dependencies (choose one option):**
-
-**Option A: Full installation (recommended)**
+2. **Install dependencies:**
 ```bash
 pip install -r requirements.txt
 ```
 
-**Option B: Minimal installation (core database tools only)**  
-```bash
-pip install -r requirements-minimal.txt
-```
-
-**Option C: Manual installation of core dependencies**
-```bash
-pip install mcp aiosqlite ollama
-```
-
-2. **Start Ollama:**
+3. **Start Ollama:**
 ```bash
 ollama serve --port 1434
 ollama pull llama3.1  # or your preferred model
 ```
 
-3. **Run the server:**
+4. **Run the server:**
 ```bash
 python main.py
 ```
@@ -253,8 +241,7 @@ AnyDbApp/
 ├── mcp_server.py        # MCP server setup and tool routing
 ├── dbtool.py            # Database operations and SQL tools
 ├── filetool.py          # Vector database and file operations
-├── requirements.txt     # Python dependencies  
-├── requirements-minimal.txt  # Core dependencies only
+├── requirements.txt     # Python dependencies
 ├── pyproject.toml      # Project metadata
 └── README.md           # This file
 ```

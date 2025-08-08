@@ -42,19 +42,11 @@ def print_startup_info():
     print("   • sql_execute      - Execute raw modification queries")
     print()
     
-    # Check for vector database capabilities
-    try:
-        import sentence_transformers
-        import chromadb
-        print("   Vector Database Tools:")
-        print("   • add_file_to_vector_db     - Add files for semantic search")
-        print("   • search_vector_db          - Search files by meaning")
-        print("   • list_vector_files         - List stored files")
-        print("   • remove_file_from_vector_db - Remove files")
-        print("   ✅ Vector database functionality available")
-    except ImportError:
-        print("   ⚠️  Vector database tools disabled (missing dependencies)")
-        print("      Run 'pip install sentence-transformers' to enable RAG features")
+    print("   Vector Database Tools:")
+    print("   • add_file_to_vector_db     - Add files for semantic search")
+    print("   • search_vector_db          - Search files by meaning")
+    print("   • list_vector_files         - List stored files")
+    print("   • remove_file_from_vector_db - Remove files")
     
     print()
     print("🔗 Prerequisites:")
