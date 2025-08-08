@@ -249,17 +249,30 @@ Once integrated with Claude Desktop, you can use natural language:
 ### Project Structure
 ```
 AnyDbApp/
-├── main.py              # Entry point
-├── mcp_server.py        # MCP server implementation
-├── requirements.txt     # Python dependencies
+├── main.py              # Clean entry point with startup info
+├── mcp_server.py        # MCP server setup and tool routing
+├── dbtool.py            # Database operations and SQL tools
+├── filetool.py          # Vector database and file operations
+├── requirements.txt     # Python dependencies  
+├── requirements-minimal.txt  # Core dependencies only
 ├── pyproject.toml      # Project metadata
 └── README.md           # This file
 ```
 
 ### Key Components
-- **DatabaseManager**: Handles async SQLite operations
-- **OllamaClient**: Manages AI model communication
-- **MCP Server**: Implements Model Context Protocol handlers
+
+**Core Modules:**
+- **main.py**: Entry point with dependency checking and startup information
+- **mcp_server.py**: MCP protocol implementation, tool registration, and request routing
+- **dbtool.py**: Database operations, SQL generation, and data management
+- **filetool.py**: Vector database operations, file processing, and semantic search
+
+**Business Logic Classes:**
+- **DatabaseManager**: Handles async SQLite operations and database connections
+- **DatabaseTools**: High-level database operations with natural language support
+- **OllamaClient**: Manages AI model communication for SQL generation
+- **VectorDatabaseManager**: Manages ChromaDB operations and document embeddings  
+- **FileTools**: High-level file operations and semantic search functionality
 
 ## Troubleshooting
 
