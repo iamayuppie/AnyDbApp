@@ -4,15 +4,25 @@ A Model Context Protocol (MCP) server that provides intelligent database operati
 
 ## Features
 
+### Core Database Operations
 - **Natural Language to SQL**: Convert plain English instructions into SQL queries using Ollama
 - **Universal Database Operations**: Works with any SQLite table/entity without predefined schemas
 - **MCP Integration**: Seamlessly integrates with Claude Desktop and other MCP-compatible clients
 - **Async Operations**: Built on modern Python async/await for high performance
 - **Safety First**: Separate tools for read and write operations
 
+### Vector Database & RAG (NEW!)
+- **File Embedding**: Automatically convert files into vector embeddings for semantic search
+- **Semantic Search**: Find relevant content using natural language queries instead of exact keyword matching
+- **RAG Support**: Enable Claude Desktop to answer questions about uploaded documents with context
+- **Smart Chunking**: Intelligently splits large documents into overlapping chunks for better retrieval
+- **Persistent Storage**: ChromaDB-powered vector database with automatic embedding generation
+
 ## Available Tools
 
-### 1. `query_entity`
+### Database Tools
+
+#### 1. `query_entity`
 Query any table with natural language instructions.
 
 **Parameters**: 
@@ -21,7 +31,7 @@ Query any table with natural language instructions.
 
 **Example**: Query users table for active accounts
 
-### 2. `insert_entity`
+#### 2. `insert_entity`
 Insert records into any table using natural language descriptions.
 
 **Parameters**:
@@ -30,7 +40,7 @@ Insert records into any table using natural language descriptions.
 
 **Example**: Insert a new user with email and name
 
-### 3. `update_entity`
+#### 3. `update_entity`
 Update records in any table with conditions.
 
 **Parameters**:
@@ -40,7 +50,7 @@ Update records in any table with conditions.
 
 **Example**: Update user status to active where email matches
 
-### 4. `delete_entity`
+#### 4. `delete_entity`
 Delete records from any table with optional conditions.
 
 **Parameters**:
@@ -49,7 +59,7 @@ Delete records from any table with optional conditions.
 
 **Example**: Delete inactive users older than 30 days
 
-### 5. `create_table`
+#### 5. `create_table`
 Create new tables with AI-generated schemas.
 
 **Parameters**:
@@ -58,7 +68,7 @@ Create new tables with AI-generated schemas.
 
 **Example**: Create a products table with name, price, and category
 
-### 6. `sql_query`
+#### 6. `sql_query`
 Execute raw SQL SELECT queries directly.
 
 **Parameters**:
@@ -66,13 +76,49 @@ Execute raw SQL SELECT queries directly.
 
 **Example**: Direct SQL for complex joins and analytics
 
-### 7. `sql_execute`
+#### 7. `sql_execute`
 Execute raw SQL modification queries (INSERT, UPDATE, DELETE, CREATE, etc.).
 
 **Parameters**:
 - `query` (required): SQL query to execute
 
 **Example**: Direct SQL for complex data modifications
+
+### Vector Database Tools (NEW!)
+
+#### 8. `add_file_to_vector_db`
+Add a file to the vector database for semantic search and RAG (Retrieval Augmented Generation).
+
+**Parameters**:
+- `filename` (required): Name of the file
+- `content` (required): Content of the file (text)
+- `metadata` (optional): Optional metadata for the file
+
+**Example**: Add a document about machine learning for later semantic search
+
+#### 9. `search_vector_db`
+Search the vector database for relevant file content using semantic similarity.
+
+**Parameters**:
+- `query` (required): Search query for semantic similarity
+- `max_results` (optional): Maximum number of results to return (default: 5)
+
+**Example**: Find documents related to "neural networks and AI" 
+
+#### 10. `list_vector_files`
+List all files stored in the vector database.
+
+**Parameters**: None
+
+**Example**: View all documents available for search
+
+#### 11. `remove_file_from_vector_db`
+Remove a file from the vector database.
+
+**Parameters**:
+- `filename` (required): Name of the file to remove
+
+**Example**: Delete outdated documents from the knowledge base
 
 ## Installation
 
@@ -142,11 +188,20 @@ Default configuration in `mcp_server.py`:
 
 Once integrated with Claude Desktop, you can use natural language:
 
+### Database Operations
 - *"Create a users table with id, name, email, and created_at fields"*
 - *"Show me all active users from the last 30 days"*
 - *"Insert a new product: iPhone 15, price $999, category Electronics"*
 - *"Update all pending orders to processed where amount > 100"*
 - *"Delete test users where email contains 'test'"*
+
+### Vector Database & File Operations
+- *"Add this document to the knowledge base"* (when attaching a file in Claude Desktop)
+- *"Search for information about machine learning algorithms"*
+- *"Find documents related to user authentication and security"*
+- *"What does the uploaded contract say about payment terms?"*
+- *"Show me all documents I've added to the database"*
+- *"Remove the old privacy policy document"*
 
 ## Architecture
 
@@ -154,13 +209,23 @@ Once integrated with Claude Desktop, you can use natural language:
 ┌─────────────────┐    ┌──────────────┐    ┌─────────────────┐
 │   Claude        │────│  MCP Server  │────│    Ollama       │
 │   Desktop       │    │   (stdio)    │    │   (localhost)   │
+│  + File Upload  │    │              │    │                 │
 └─────────────────┘    └──────────────┘    └─────────────────┘
                               │
                               ▼
-                       ┌──────────────┐
-                       │   SQLite     │
-                       │   Database   │
-                       └──────────────┘
+                    ┌──────────────────┐
+                    │   Dual Storage   │
+                    │                  │
+                    │ ┌──────────────┐ │
+                    │ │   SQLite     │ │  ← Structured Data
+                    │ │   Database   │ │
+                    │ └──────────────┘ │
+                    │                  │
+                    │ ┌──────────────┐ │
+                    │ │  ChromaDB    │ │  ← Document Embeddings
+                    │ │ Vector Store │ │     & Semantic Search
+                    │ └──────────────┘ │
+                    └──────────────────┘
 ```
 
 ## Development

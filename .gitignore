@@ -18,6 +18,9 @@ venv/
 *.sqlite
 *.db
 
+# Vector database
+vector_db/
+
 # IDE and editor files
 .vscode/
 .idea/
