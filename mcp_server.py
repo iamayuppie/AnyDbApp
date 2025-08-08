@@ -12,9 +12,18 @@ import ollama
 from mcp.server import Server
 from mcp import Tool
 import aiosqlite
-import chromadb
-from sentence_transformers import SentenceTransformer
-import tiktoken
+
+# Optional vector database imports with fallback
+VECTOR_DB_AVAILABLE = True
+try:
+    import chromadb
+    from sentence_transformers import SentenceTransformer
+    import tiktoken
+except ImportError as e:
+    VECTOR_DB_AVAILABLE = False
+    logger_fallback_msg = f"Vector database dependencies not available: {e}"
+    print(f"WARNING: {logger_fallback_msg}")
+    print("Vector database tools will be disabled. Run 'pip install -r requirements.txt' to enable them.")
 
 # Set up logging
 def setup_logging():
@@ -122,24 +131,34 @@ class OllamaClient:
 
 class VectorDatabaseManager:
     def __init__(self, collection_name: str = "file_embeddings"):
-        script_dir = os.path.dirname(os.path.abspath(__file__))
-        self.db_path = os.path.join(script_dir, "vector_db")
-        
-        # Initialize ChromaDB
-        self.chroma_client = chromadb.PersistentClient(path=self.db_path)
-        self.collection = self.chroma_client.get_or_create_collection(
-            name=collection_name,
-            metadata={"hnsw:space": "cosine"}
-        )
-        
-        # Initialize sentence transformer for embeddings
-        self.embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
-        
-        # Initialize tokenizer for text chunking
-        self.tokenizer = tiktoken.get_encoding("cl100k_base")
-        
-        logger.info(f"Vector database initialized at: {self.db_path}")
-        logger.info(f"Collection '{collection_name}' ready with {self.collection.count()} documents")
+        if not VECTOR_DB_AVAILABLE:
+            logger.warning("Vector database dependencies not available - vector operations will be disabled")
+            self.available = False
+            return
+            
+        try:
+            script_dir = os.path.dirname(os.path.abspath(__file__))
+            self.db_path = os.path.join(script_dir, "vector_db")
+            
+            # Initialize ChromaDB
+            self.chroma_client = chromadb.PersistentClient(path=self.db_path)
+            self.collection = self.chroma_client.get_or_create_collection(
+                name=collection_name,
+                metadata={"hnsw:space": "cosine"}
+            )
+            
+            # Initialize sentence transformer for embeddings
+            self.embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
+            
+            # Initialize tokenizer for text chunking
+            self.tokenizer = tiktoken.get_encoding("cl100k_base")
+            
+            self.available = True
+            logger.info(f"Vector database initialized at: {self.db_path}")
+            logger.info(f"Collection '{collection_name}' ready with {self.collection.count()} documents")
+        except Exception as e:
+            logger.error(f"Failed to initialize vector database: {str(e)}")
+            self.available = False
     
     def _chunk_text(self, text: str, max_tokens: int = 500, overlap: int = 50) -> List[str]:
         """Split text into overlapping chunks based on token count."""
@@ -163,6 +182,9 @@ class VectorDatabaseManager:
     
     async def add_file(self, filename: str, content: str, metadata: Dict[str, Any] = None) -> Dict[str, Any]:
         """Add a file to the vector database with embeddings."""
+        if not getattr(self, 'available', False):
+            return {"error": "Vector database not available", "status": "disabled"}
+            
         logger.info(f"Adding file to vector database: {filename}")
         
         if metadata is None:
@@ -214,6 +236,9 @@ class VectorDatabaseManager:
     
     async def remove_file(self, filename: str) -> int:
         """Remove all chunks of a file from the vector database."""
+        if not getattr(self, 'available', False):
+            return 0
+            
         try:
             # Find all chunks for this file
             results = self.collection.get(
@@ -233,6 +258,9 @@ class VectorDatabaseManager:
     
     async def search_files(self, query: str, max_results: int = 5) -> List[Dict[str, Any]]:
         """Search for relevant file chunks based on semantic similarity."""
+        if not getattr(self, 'available', False):
+            return []
+            
         logger.debug(f"Searching vector database for: {query}")
         
         # Search the collection
@@ -258,6 +286,9 @@ class VectorDatabaseManager:
     
     async def list_files(self) -> List[Dict[str, Any]]:
         """List all files in the vector database."""
+        if not getattr(self, 'available', False):
+            return []
+            
         try:
             # Get all unique filenames
             all_results = self.collection.get()
@@ -283,11 +314,31 @@ class VectorDatabaseManager:
 server = Server("anydb-mcp")
 db_manager = DatabaseManager()
 ollama_client = OllamaClient()
-vector_db_manager = VectorDatabaseManager()
+
+# Initialize vector database manager with error handling
+try:
+    vector_db_manager = VectorDatabaseManager()
+except Exception as e:
+    logger.error(f"Failed to initialize vector database: {str(e)}")
+    # Create a dummy manager that always returns unavailable
+    class DummyVectorManager:
+        def __init__(self):
+            self.available = False
+        async def add_file(self, *args, **kwargs):
+            return {"error": "Vector database not available", "status": "disabled"}
+        async def search_files(self, *args, **kwargs):
+            return []
+        async def list_files(self):
+            return []
+        async def remove_file(self, *args, **kwargs):
+            return 0
+    
+    vector_db_manager = DummyVectorManager()
 
 @server.list_tools()
 async def list_tools() -> List[Tool]:
-    return [
+    # Core database tools (always available)
+    tools = [
         Tool(
             name="query_entity",
             description="Query any entity/table with natural language instructions",
@@ -370,53 +421,61 @@ async def list_tools() -> List[Tool]:
                 },
                 "required": ["query"]
             }
-        ),
-        Tool(
-            name="add_file_to_vector_db",
-            description="Add a file to the vector database for semantic search and RAG",
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "filename": {"type": "string", "description": "Name of the file"},
-                    "content": {"type": "string", "description": "Content of the file (text)"},
-                    "metadata": {"type": "object", "description": "Optional metadata for the file", "default": {}}
-                },
-                "required": ["filename", "content"]
-            }
-        ),
-        Tool(
-            name="search_vector_db",
-            description="Search the vector database for relevant file content based on semantic similarity",
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "query": {"type": "string", "description": "Search query for semantic similarity"},
-                    "max_results": {"type": "integer", "description": "Maximum number of results to return", "default": 5}
-                },
-                "required": ["query"]
-            }
-        ),
-        Tool(
-            name="list_vector_files",
-            description="List all files stored in the vector database",
-            inputSchema={
-                "type": "object",
-                "properties": {},
-                "required": []
-            }
-        ),
-        Tool(
-            name="remove_file_from_vector_db",
-            description="Remove a file from the vector database",
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "filename": {"type": "string", "description": "Name of the file to remove"}
-                },
-                "required": ["filename"]
-            }
         )
     ]
+    
+    # Add vector database tools only if available
+    if getattr(vector_db_manager, 'available', False):
+        vector_tools = [
+            Tool(
+                name="add_file_to_vector_db",
+                description="Add a file to the vector database for semantic search and RAG",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "filename": {"type": "string", "description": "Name of the file"},
+                        "content": {"type": "string", "description": "Content of the file (text)"},
+                        "metadata": {"type": "object", "description": "Optional metadata for the file", "default": {}}
+                    },
+                    "required": ["filename", "content"]
+                }
+            ),
+            Tool(
+                name="search_vector_db",
+                description="Search the vector database for relevant file content based on semantic similarity",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "query": {"type": "string", "description": "Search query for semantic similarity"},
+                        "max_results": {"type": "integer", "description": "Maximum number of results to return", "default": 5}
+                    },
+                    "required": ["query"]
+                }
+            ),
+            Tool(
+                name="list_vector_files",
+                description="List all files stored in the vector database",
+                inputSchema={
+                    "type": "object",
+                    "properties": {},
+                    "required": []
+                }
+            ),
+            Tool(
+                name="remove_file_from_vector_db",
+                description="Remove a file from the vector database",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "filename": {"type": "string", "description": "Name of the file to remove"}
+                    },
+                    "required": ["filename"]
+                }
+            )
+        ]
+        tools.extend(vector_tools)
+    
+    return tools
 
 @server.call_tool()
 async def call_tool(name: str, arguments: Dict[str, Any]) -> List[Dict[str, Any]]:
@@ -497,6 +556,10 @@ async def call_tool(name: str, arguments: Dict[str, Any]) -> List[Dict[str, Any]
             return [{"type": "text", "text": f"Operation completed. Affected rows: {affected_rows}"}]
         
         elif name == "add_file_to_vector_db":
+            if not getattr(vector_db_manager, 'available', False):
+                error_msg = "Vector database not available. Please install dependencies: pip install sentence-transformers"
+                return [{"type": "text", "text": json.dumps({"error": error_msg, "status": "disabled"})}]
+                
             filename = arguments["filename"]
             content = arguments["content"]
             metadata = arguments.get("metadata", {})
@@ -506,10 +569,18 @@ async def call_tool(name: str, arguments: Dict[str, Any]) -> List[Dict[str, Any]
             
             result = await vector_db_manager.add_file(filename, content, metadata)
             response = [{"type": "text", "text": json.dumps(result, indent=2)}]
-            logger.info(f"RESPONSE: File added successfully - {result['chunks_added']} chunks")
+            
+            if result.get("status") == "success":
+                logger.info(f"RESPONSE: File added successfully - {result['chunks_added']} chunks")
+            else:
+                logger.warning(f"RESPONSE: File add failed - {result}")
             return response
         
         elif name == "search_vector_db":
+            if not getattr(vector_db_manager, 'available', False):
+                error_msg = "Vector database not available. Please install dependencies: pip install sentence-transformers"
+                return [{"type": "text", "text": json.dumps({"error": error_msg, "status": "disabled"})}]
+                
             query = arguments["query"]
             max_results = arguments.get("max_results", 5)
             
@@ -526,6 +597,10 @@ async def call_tool(name: str, arguments: Dict[str, Any]) -> List[Dict[str, Any]
             return response
         
         elif name == "list_vector_files":
+            if not getattr(vector_db_manager, 'available', False):
+                error_msg = "Vector database not available. Please install dependencies: pip install sentence-transformers"
+                return [{"type": "text", "text": json.dumps({"error": error_msg, "files": [], "total_files": 0})}]
+                
             logger.info("Listing files in vector database")
             
             files = await vector_db_manager.list_files()
@@ -538,6 +613,10 @@ async def call_tool(name: str, arguments: Dict[str, Any]) -> List[Dict[str, Any]
             return response
         
         elif name == "remove_file_from_vector_db":
+            if not getattr(vector_db_manager, 'available', False):
+                error_msg = "Vector database not available. Please install dependencies: pip install sentence-transformers"
+                return [{"type": "text", "text": json.dumps({"error": error_msg, "status": "disabled"})}]
+                
             filename = arguments["filename"]
             
             logger.info(f"Removing file from vector database - Filename: {filename}")
