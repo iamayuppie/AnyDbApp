@@ -161,15 +161,15 @@ Add this server to Claude Desktop by editing your config file:
 
 ```json
 {
-  "mcpServers": {
-    "anydb": {
-      "command": "python",
-      "args": ["C:\\path\\to\\AnyDbApp\\main.py"],
-      "env": {
-        "PYTHONPATH": "C:\\path\\to\\AnyDbApp"
+    "mcpServers": {
+      "anydb": {
+        "command": "python",
+        "args": ["C:\\Path\\To\\AnyDbApp\\mcp_server_stdio.py"],
+        "env": {
+          "PYTHONPATH": "C:\\Path\\To\\AnyDbApp"
+        }
       }
     }
-  }
 }
 ```
 

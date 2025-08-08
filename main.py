@@ -66,14 +66,26 @@ def print_startup_info():
 def main():
     """Main entry point for the AnyDB MCP Server."""
     try:
-        print_startup_info()
+        # Only show startup info when running directly (not via Claude Desktop)
+        # Claude Desktop communicates via stdio and expects clean JSON
+        if os.getenv('MCP_DISABLE_STARTUP_MESSAGES') != '1' and sys.stdin.isatty():
+            print_startup_info()
+        
         asyncio.run(mcp_main())
     except KeyboardInterrupt:
-        print("\n⛔ Server stopped by user")
+        # Only print if we have a terminal (not when running via Claude Desktop)
+        if sys.stdin.isatty():
+            print("\n⛔ Server stopped by user")
         sys.exit(0)
     except Exception as e:
-        print(f"\n❌ Server failed to start: {str(e)}")
-        print("Check mcp_server.log for detailed error information")
+        # Log errors but don't print to stdout when running via Claude Desktop
+        if sys.stdin.isatty():
+            print(f"\n❌ Server failed to start: {str(e)}")
+            print("Check mcp_server.log for detailed error information")
+        # Always log to file for debugging
+        import logging
+        logger = logging.getLogger('mcp_server')
+        logger.error(f"Server failed to start: {str(e)}")
         sys.exit(1)
 
 

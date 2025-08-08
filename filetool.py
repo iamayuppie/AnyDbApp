@@ -13,17 +13,9 @@ import hashlib
 import logging
 from datetime import datetime
 from typing import Any, Dict, List, Optional
-
-# Optional vector database imports with fallback
-VECTOR_DB_AVAILABLE = True
-try:
-    import chromadb
-    from sentence_transformers import SentenceTransformer
-    import tiktoken
-except ImportError as e:
-    VECTOR_DB_AVAILABLE = False
-    print(f"WARNING: Vector database dependencies not available: {e}")
-    print("Vector database tools will be disabled. Run 'pip install sentence-transformers' to enable them.")
+import chromadb
+from sentence_transformers import SentenceTransformer
+import tiktoken
 
 # Get logger
 logger = logging.getLogger('mcp_server')
@@ -32,12 +24,7 @@ logger = logging.getLogger('mcp_server')
 class VectorDatabaseManager:
     """Manages ChromaDB vector database operations for semantic search."""
     
-    def __init__(self, collection_name: str = "file_embeddings"):
-        if not VECTOR_DB_AVAILABLE:
-            logger.warning("Vector database dependencies not available - vector operations will be disabled")
-            self.available = False
-            return
-            
+    def __init__(self, collection_name: str = "file_embeddings"):           
         try:
             script_dir = os.path.dirname(os.path.abspath(__file__))
             self.db_path = os.path.join(script_dir, "vector_db")

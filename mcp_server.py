@@ -8,6 +8,7 @@ Business logic is separated into dbtool.py and filetool.py modules.
 import asyncio
 import json
 import os
+import sys
 import logging
 from datetime import datetime
 from typing import Any, Dict, List
@@ -50,9 +51,13 @@ def setup_logging():
 
 # Initialize logger
 logger = setup_logging()
-logger.info("="*50)
-logger.info("MCP Server Starting Up")
-logger.info("="*50)
+# Only log startup banner when running directly (not via Claude Desktop)
+if os.getenv('MCP_DISABLE_STARTUP_MESSAGES') != '1' and hasattr(sys, 'stdin') and sys.stdin.isatty():
+    logger.info("="*50)
+    logger.info("MCP Server Starting Up")
+    logger.info("="*50)
+else:
+    logger.info("MCP Server Starting Up")
 
 # Initialize MCP Server
 server = Server("anydb-mcp")
