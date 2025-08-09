@@ -12,12 +12,19 @@ A Model Context Protocol (MCP) server that provides intelligent database operati
 - **Async Operations**: Built on modern Python async/await for high performance
 - **Safety First**: Separate tools for read and write operations
 
-### Vector Database & RAG (NEW!)
+### Vector Database & RAG
 - **File Embedding**: Automatically convert files into vector embeddings for semantic search
 - **Semantic Search**: Find relevant content using natural language queries instead of exact keyword matching
 - **RAG Support**: Enable Claude Desktop to answer questions about uploaded documents with context
 - **Smart Chunking**: Intelligently splits large documents into overlapping chunks for better retrieval
 - **Persistent Storage**: ChromaDB-powered vector database with automatic embedding generation
+
+### Web Scraping & Knowledge Base (NEW!)
+- **URL Scraping**: Extract and store content from web pages automatically
+- **Smart Content Extraction**: Clean HTML and extract meaningful text with metadata
+- **URL Security**: Built-in validation and security checks to prevent malicious URLs
+- **Semantic Web Search**: Query scraped web content using natural language
+- **Web Knowledge Management**: List, search, and manage scraped web pages
 
 ## Available Tools
 
@@ -123,6 +130,41 @@ Remove a file from the vector database.
 
 **Example**: Delete outdated documents from the knowledge base
 
+### Web Scraping Tools (NEW!)
+
+#### 12. `scrape_url`
+Scrape content from a web page and store it in the vector database for semantic search and RAG.
+
+**Parameters**:
+- `url` (required): URL of the web page to scrape
+- `custom_filename` (optional): Custom filename for the scraped content
+
+**Example**: Scrape a Wikipedia article or documentation page for later querying
+
+#### 13. `query_web_content`
+Query scraped web page content using semantic search to find relevant information.
+
+**Parameters**:
+- `query` (required): Search query for finding relevant web content
+- `max_results` (optional): Maximum number of results to return (default: 5)
+
+**Example**: Search scraped web pages for information about specific topics
+
+#### 14. `list_scraped_pages`
+List all scraped web pages stored in the vector database with metadata.
+
+**Parameters**: None
+
+**Example**: View all websites you've scraped and stored
+
+#### 15. `remove_scraped_page`
+Remove a scraped web page from the vector database.
+
+**Parameters**:
+- `filename` (required): Filename of the scraped page to remove
+
+**Example**: Clean up outdated or unwanted scraped web content
+
 ## Installation
 
 ### Prerequisites
@@ -215,6 +257,14 @@ Once integrated with Claude Desktop, you can use natural language:
 - *"Show me all documents I've added to the database"*
 - *"Remove the old privacy policy document"*
 
+### Web Scraping & Knowledge Base
+- *"Scrape this Wikipedia article about neural networks: https://en.wikipedia.org/wiki/Neural_network"*
+- *"Save the content from this blog post for later reference"*
+- *"What information did I scrape about machine learning from that research paper website?"*
+- *"Search my scraped web pages for information about Python best practices"*
+- *"Show me all the web pages I've scraped and stored"*
+- *"Remove the outdated documentation I scraped last month"*
+
 ## Architecture
 
 ```
@@ -223,21 +273,21 @@ Once integrated with Claude Desktop, you can use natural language:
 │   Desktop       │    │   (stdio)    │    │   (localhost)   │
 │  + File Upload  │    │              │    │                 │
 └─────────────────┘    └──────────────┘    └─────────────────┘
-                              │
-                              ▼
-                    ┌──────────────────┐
-                    │   Dual Storage   │
-                    │                  │
-                    │ ┌──────────────┐ │
-                    │ │   SQLite     │ │  ← Structured Data
-                    │ │   Database   │ │
-                    │ └──────────────┘ │
-                    │                  │
-                    │ ┌──────────────┐ │
-                    │ │  ChromaDB    │ │  ← Document Embeddings
-                    │ │ Vector Store │ │     & Semantic Search
-                    │ └──────────────┘ │
-                    └──────────────────┘
+                              │                       │
+                              ▼                       ▼
+                    ┌──────────────────┐    ┌─────────────────┐
+                    │   Dual Storage   │    │  Web Scraper    │
+                    │                  │    │    Engine       │
+                    │ ┌──────────────┐ │    │                 │
+                    │ │   SQLite     │ │◄───┤ • URL Validation│
+                    │ │   Database   │ │    │ • Content Extract│
+                    │ └──────────────┘ │    │ • Security Checks│
+                    │                  │    └─────────────────┘
+                    │ ┌──────────────┐ │             │
+                    │ │  ChromaDB    │ │◄────────────┘
+                    │ │ Vector Store │ │  ← Web Content +
+                    │ └──────────────┘ │    Document Embeddings
+                    └──────────────────┘    & Semantic Search
 ```
 
 ## Development
@@ -249,6 +299,7 @@ AnyDbApp/
 ├── mcp_server.py        # MCP server setup and tool routing
 ├── dbtool.py            # Database operations and SQL tools
 ├── filetool.py          # Vector database and file operations
+├── webscrapertool.py    # Web scraping and content extraction
 ├── requirements.txt     # Python dependencies
 ├── pyproject.toml      # Project metadata
 └── README.md           # This file
@@ -261,6 +312,7 @@ AnyDbApp/
 - **mcp_server.py**: MCP protocol implementation, tool registration, and request routing
 - **dbtool.py**: Database operations, SQL generation, and data management
 - **filetool.py**: Vector database operations, file processing, and semantic search
+- **webscrapertool.py**: Web scraping, content extraction, and URL processing
 
 **Business Logic Classes:**
 - **DatabaseManager**: Handles async SQLite operations and database connections
@@ -268,6 +320,8 @@ AnyDbApp/
 - **OllamaClient**: Manages AI model communication for SQL generation
 - **VectorDatabaseManager**: Manages ChromaDB operations and document embeddings  
 - **FileTools**: High-level file operations and semantic search functionality
+- **WebScraperManager**: Handles web page fetching, content extraction, and URL validation
+- **WebScraperTools**: High-level web scraping operations with vector database integration
 
 ## Troubleshooting
 

@@ -19,6 +19,7 @@ from mcp import Tool
 # Import our business logic modules
 from dbtool import DatabaseManager, OllamaClient, DatabaseTools
 from filetool import VectorDatabaseManager, FileTools
+from webscrapertool import WebScraperTools
 
 # Set up logging
 def setup_logging():
@@ -71,6 +72,7 @@ db_tools = DatabaseTools(db_manager, ollama_client)
 try:
     vector_db_manager = VectorDatabaseManager()
     file_tools = FileTools(vector_db_manager)
+    web_scraper_tools = WebScraperTools(vector_db_manager)
 except Exception as e:
     logger.error(f"Stopping. Failed to initialize vector database: {str(e)}")
     exit(1)
@@ -216,6 +218,55 @@ async def list_tools() -> List[Tool]:
     ]
     tools.extend(vector_tools)
     
+    # Web scraper tools
+    web_scraper_tools_list = [
+        Tool(
+            name="scrape_url",
+            description="Scrape content from a web page and store it in the vector database for semantic search",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "url": {"type": "string", "description": "URL of the web page to scrape"},
+                    "custom_filename": {"type": "string", "description": "Optional custom filename for the scraped content", "default": ""}
+                },
+                "required": ["url"]
+            }
+        ),
+        Tool(
+            name="query_web_content",
+            description="Query scraped web page content using semantic search",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "query": {"type": "string", "description": "Search query for finding relevant web content"},
+                    "max_results": {"type": "integer", "description": "Maximum number of results to return", "default": 5}
+                },
+                "required": ["query"]
+            }
+        ),
+        Tool(
+            name="list_scraped_pages",
+            description="List all scraped web pages stored in the vector database",
+            inputSchema={
+                "type": "object",
+                "properties": {},
+                "required": []
+            }
+        ),
+        Tool(
+            name="remove_scraped_page",
+            description="Remove a scraped web page from the vector database",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "filename": {"type": "string", "description": "Filename of the scraped page to remove"}
+                },
+                "required": ["filename"]
+            }
+        )
+    ]
+    tools.extend(web_scraper_tools_list)
+    
     return tools
 
 
@@ -309,6 +360,38 @@ async def call_tool(name: str, arguments: Dict[str, Any]) -> List[Dict[str, Any]
         elif name == "remove_file_from_vector_db":
             filename = arguments["filename"]
             result = await file_tools.remove_file_from_vector_db(filename)
+            response = [{"type": "text", "text": json.dumps(result, indent=2)}]
+            logger.debug(f"FULL RESPONSE: {json.dumps(result, indent=2)}")
+            return response
+        
+        # Web scraper tools
+        elif name == "scrape_url":
+            url = arguments["url"]
+            custom_filename = arguments.get("custom_filename", None)
+            if not custom_filename:
+                custom_filename = None
+            result = await web_scraper_tools.scrape_and_store(url, custom_filename)
+            response = [{"type": "text", "text": json.dumps(result, indent=2)}]
+            logger.debug(f"FULL RESPONSE: {json.dumps(result, indent=2)}")
+            return response
+        
+        elif name == "query_web_content":
+            query = arguments["query"]
+            max_results = arguments.get("max_results", 5)
+            result = await web_scraper_tools.query_scraped_content(query, max_results)
+            response = [{"type": "text", "text": json.dumps(result, indent=2)}]
+            logger.debug(f"FULL RESPONSE: {json.dumps(result, indent=2)}")
+            return response
+        
+        elif name == "list_scraped_pages":
+            result = await web_scraper_tools.list_scraped_pages()
+            response = [{"type": "text", "text": json.dumps(result, indent=2)}]
+            logger.debug(f"FULL RESPONSE: {json.dumps(result, indent=2)}")
+            return response
+        
+        elif name == "remove_scraped_page":
+            filename = arguments["filename"]
+            result = await web_scraper_tools.remove_scraped_page(filename)
             response = [{"type": "text", "text": json.dumps(result, indent=2)}]
             logger.debug(f"FULL RESPONSE: {json.dumps(result, indent=2)}")
             return response
