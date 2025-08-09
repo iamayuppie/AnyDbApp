@@ -18,7 +18,7 @@ from mcp import Tool
 
 # Import our business logic modules
 from dbtool import DatabaseManager, OllamaClient, DatabaseTools
-from filetool import VectorDatabaseManager, FileTools, DummyVectorManager
+from filetool import VectorDatabaseManager, FileTools
 
 # Set up logging
 def setup_logging():
@@ -72,9 +72,8 @@ try:
     vector_db_manager = VectorDatabaseManager()
     file_tools = FileTools(vector_db_manager)
 except Exception as e:
-    logger.error(f"Failed to initialize vector database: {str(e)}")
-    vector_db_manager = DummyVectorManager()
-    file_tools = FileTools(vector_db_manager)
+    logger.error(f"Stopping. Failed to initialize vector database: {str(e)}")
+    exit(1)
 
 
 @server.list_tools()
@@ -167,56 +166,55 @@ async def list_tools() -> List[Tool]:
         )
     ]
     
-    # Add vector database tools only if available
-    if getattr(vector_db_manager, 'available', False):
-        vector_tools = [
-            Tool(
-                name="add_file_to_vector_db",
-                description="Add a file to the vector database for semantic search and RAG",
-                inputSchema={
-                    "type": "object",
-                    "properties": {
-                        "filename": {"type": "string", "description": "Name of the file"},
-                        "content": {"type": "string", "description": "Content of the file (text)"},
-                        "metadata": {"type": "object", "description": "Optional metadata for the file", "default": {}}
-                    },
-                    "required": ["filename", "content"]
-                }
-            ),
-            Tool(
-                name="search_vector_db",
-                description="Search the vector database for relevant file content based on semantic similarity",
-                inputSchema={
-                    "type": "object",
-                    "properties": {
-                        "query": {"type": "string", "description": "Search query for semantic similarity"},
-                        "max_results": {"type": "integer", "description": "Maximum number of results to return", "default": 5}
-                    },
-                    "required": ["query"]
-                }
-            ),
-            Tool(
-                name="list_vector_files",
-                description="List all files stored in the vector database",
-                inputSchema={
-                    "type": "object",
-                    "properties": {},
-                    "required": []
-                }
-            ),
-            Tool(
-                name="remove_file_from_vector_db",
-                description="Remove a file from the vector database",
-                inputSchema={
-                    "type": "object",
-                    "properties": {
-                        "filename": {"type": "string", "description": "Name of the file to remove"}
-                    },
-                    "required": ["filename"]
-                }
-            )
-        ]
-        tools.extend(vector_tools)
+
+    vector_tools = [
+        Tool(
+            name="add_file_to_vector_db",
+            description="Add a file to the vector database for semantic search and RAG",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "filename": {"type": "string", "description": "Name of the file"},
+                    "content": {"type": "string", "description": "Content of the file (text)"},
+                    "metadata": {"type": "object", "description": "Optional metadata for the file", "default": {}}
+                },
+                "required": ["filename", "content"]
+            }
+        ),
+        Tool(
+            name="search_vector_db",
+            description="Search the vector database for relevant file content based on semantic similarity",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "query": {"type": "string", "description": "Search query for semantic similarity"},
+                    "max_results": {"type": "integer", "description": "Maximum number of results to return", "default": 5}
+                },
+                "required": ["query"]
+            }
+        ),
+        Tool(
+            name="list_vector_files",
+            description="List all files stored in the vector database",
+            inputSchema={
+                "type": "object",
+                "properties": {},
+                "required": []
+            }
+        ),
+        Tool(
+            name="remove_file_from_vector_db",
+            description="Remove a file from the vector database",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "filename": {"type": "string", "description": "Name of the file to remove"}
+                },
+                "required": ["filename"]
+            }
+        )
+    ]
+    tools.extend(vector_tools)
     
     return tools
 

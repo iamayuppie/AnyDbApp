@@ -280,23 +280,3 @@ class FileTools:
         
         logger.info(f"Removed {chunks_removed} chunks")
         return response_data
-
-
-# Dummy manager for when vector DB is not available
-class DummyVectorManager:
-    """Dummy vector manager when dependencies are not available."""
-    
-    def __init__(self):
-        self.available = False
-    
-    async def add_file(self, *args, **kwargs):
-        return {"error": "Vector database not available", "status": "disabled"}
-    
-    async def search_files(self, *args, **kwargs):
-        return []
-    
-    async def list_files(self):
-        return []
-    
-    async def remove_file(self, *args, **kwargs):
-        return 0

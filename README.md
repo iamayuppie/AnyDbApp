@@ -7,6 +7,7 @@ A Model Context Protocol (MCP) server that provides intelligent database operati
 ### Core Database Operations
 - **Natural Language to SQL**: Convert plain English instructions into SQL queries using Ollama
 - **Universal Database Operations**: Works with any SQLite table/entity without predefined schemas
+- **Automatic Schema Evolution**: Dynamically adds columns to tables when new data requires them
 - **MCP Integration**: Seamlessly integrates with Claude Desktop and other MCP-compatible clients
 - **Async Operations**: Built on modern Python async/await for high performance
 - **Safety First**: Separate tools for read and write operations
@@ -32,16 +33,17 @@ Query any table with natural language instructions.
 **Example**: Query users table for active accounts
 
 #### 2. `insert_entity`
-Insert records into any table using natural language descriptions.
+Insert records into any table using natural language descriptions. Automatically adds new columns if the data contains fields not present in the current table schema.
 
 **Parameters**:
 - `entity_name` (required): Name of the table
 - `data` (required): Data to insert (JSON or natural description)
 
 **Example**: Insert a new user with email and name
+**Auto-Schema**: If inserting "user with name John, email john@test.com, and premium status" into a table that only has name/email columns, the system will automatically add a "status" column
 
 #### 3. `update_entity`
-Update records in any table with conditions.
+Update records in any table with conditions. Automatically adds new columns if the update introduces new fields.
 
 **Parameters**:
 - `entity_name` (required): Name of the table
@@ -49,6 +51,7 @@ Update records in any table with conditions.
 - `conditions` (optional): WHERE conditions
 
 **Example**: Update user status to active where email matches
+**Auto-Schema**: If updating with "set premium status to gold and loyalty points to 100" on a table without these columns, they will be added automatically
 
 #### 4. `delete_entity`
 Delete records from any table with optional conditions.
@@ -198,6 +201,11 @@ Once integrated with Claude Desktop, you can use natural language:
 - *"Insert a new product: iPhone 15, price $999, category Electronics"*
 - *"Update all pending orders to processed where amount > 100"*
 - *"Delete test users where email contains 'test'"*
+
+### Smart Schema Evolution
+- *"Insert a book: Title 'AI Handbook', Author 'Jane Doe', ISBN '123456', Format 'Hardcover'"* (automatically adds Format column if missing)
+- *"Add employee with name John, salary 75000, department IT, and remote status"* (adds department and remote columns as needed)
+- *"Update product with warranty period 2 years and eco-friendly rating A+"* (dynamically expands product schema)
 
 ### Vector Database & File Operations
 - *"Add this document to the knowledge base"* (when attaching a file in Claude Desktop)
